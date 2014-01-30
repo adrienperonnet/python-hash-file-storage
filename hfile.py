@@ -16,24 +16,24 @@ Basic common methods used to store data in hashed files
 """
 class HFile(object):
     """
-    This method is used to generate the name of the directories containing the datas.
+    This method is used to generate the name of the directories containing data.
     We need to choose a hash with the maximum entropy to avoid collision and problematics merges.
     """
 
     """
-    We instaure a hierarchy between the datas
+    We instaure a hierarchy between data.
     """
     isChild=False
     childType=None
 
     """
-    Make all the methods in this class Thread Safe
+    Make all the methods in this class Thread Safe.
     """
     _Locks={} # This dictionary contain the lock on each file. And male the reading/editing of each file thread safe.
     _Lock=threading.Lock() # This lock make the Locks dictionary thread safe.
     
     """
-    Name of the keys of the self.info dictionnary.
+    Name of the keys of the self.info dictionary.
     Put here all the name of the variable you will need to be stored with the object.
     """
     infos_fields=set([])
@@ -138,7 +138,7 @@ class HFile(object):
                 raise ObjectMalformed(data_object=self,message="Invalid Json Document",original_message=e)
 
     def _new_id(self):
-        """Set a new non-used hash id to the object"""
+        """Set a new non used hash id to the object"""
         self.id=HFile._generate_id()
         while os.path.exists(self._infos_path()):
             self.id=HFile._generate_id()
