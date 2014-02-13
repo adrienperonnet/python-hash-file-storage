@@ -249,11 +249,14 @@ class Node(HFile):
         ids=map(lambda name:name.split("__")[0],fnames)
         return [cls_item(id=id,parent=self) for id in ids],total
 
+    @classmethod
+    def has_child(cls):
+        return cls.childType is not None
+
     def get_childs(self,begin=0,end=100):
         """Get all the child of the specified object"""
-        if self.__class__.childType==None:
-            raise AttributeError(
-            "This is as parent class,cant't call a get_childs method")
+        if not self.__class__.has_child():
+            raise AttributeError("%s is not a parent, cant't call a get_childs method"%self)
         fns,tot=self._get_filenames("%s/*.obj"%self._get_object_path(),begin,end)
         return [self.__class__.childType(id=n,parent=self) for n in fns],tot
 
