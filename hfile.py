@@ -11,13 +11,9 @@ from utils import opened_w_error,memoize
 from hfile_exceptions import ObjectNotFound,ObjectMalformed
 
 
-"""
-Basic common methods used to store data in hashed files
-"""
 class HFile(object):
     """
-    This method is used to generate the name of the directories containing data.
-    We need to choose a hash with the maximum entropy to avoid collision and problematics merges.
+    Basic common class used to store data in hashed files
     """
 
     """
@@ -29,12 +25,11 @@ class HFile(object):
     """
     Make all the methods in this class Thread Safe.
     """
-    _Locks={} # This dictionary contain the lock on each file. And male the reading/editing of each file thread safe.
+    _Locks={} # This dictionary contain the lock on each file.
     _Lock=threading.Lock() # This lock make the Locks dictionary thread safe.
     
     """
     Name of the keys of the self.info dictionary.
-    Put here all the name of the variable you will need to be stored with the object.
     """
     infos_fields=set([])
 
@@ -48,8 +43,8 @@ class HFile(object):
         _get_object_path()= /home/$USER/data/objects/hash1
         _infos_path()=      /home/$USER/data/objects/hash1/infos.json
     """
-    SavePath=None #The path to the directory Dir
-    Dir=None #The name of the directory containing all the datas.
+    SavePath=None #The path to the directory where the data is stored.
+    Dir=None #The name of the directory containing all the data.
 
     @classmethod
     def _get_path(cls):
@@ -65,7 +60,7 @@ class HFile(object):
     @classmethod
     def initialize(cls,SavePath):
         """
-        This method take care of creating the initial directory for the data objects
+        This method take care of creating the initial directory.
         """
         cls.Dir=cls.__name__
         cls.SavePath=SavePath
@@ -80,22 +75,24 @@ class HFile(object):
         if infos is None:
             infos = self.infos
         if not isinstance(infos, dict):
-			raise ObjectMalfomered(data_object=self,message="You should pass a dictionary to initiate the object")
+            raise ObjectMalfomered(data_object=self,
+                message="You should pass a dictionary to initiate the object")
         i_set=set([k for k,_ in infos.items() if k != "id"])
         if i_set != self.__class__.infos_fields:
-            raise ObjectMalformed(data_object=self,message="Corrupted data ('%s' are not allowed and '%s' are required)"%(
+            raise ObjectMalformed(data_object=self,
+                message="Corrupted data ('%s' not allowed, '%s' are required)"%(
                 ', '.join(i_set.difference(self.__class__.infos_fields)),
                 ', '.join((self.__class__.infos_fields).difference(set(i_set)))
                 ))
 
-    
     def __init__(self,parent=None,data=None,id=None,load=True):
         """
         Write or read data in a file
         >obj=Obj(data={"test":"t"})
         recover the object from storage, with specified id
         >obj=Obj(id=5,load=True) 
-        recover the object from storage, with specified id without reading the file: only to use specifics methods like remove().
+        recover the object from storage, with specified id without reading
+        the file: only to use specifics methods like remove().
         >obj=Obj(id=5,load=False)
         """
         #Cache the function result
@@ -119,23 +116,25 @@ class HFile(object):
         else:
             raise AttributeError("Invalid constructor for class %s"%self.__class__)
         #We want to easily recuperate the substantial data in self.infos
-        if 	load:
+        if load:
             self.infos["id"]=self.id
             self._check_valid_dict()
         
     @memoize
     def _get(self):
         """
-        Read data from the file.
+        œRead data from the file.
         """
         with self.__class__._Locks[self.id]:
             try:
                 with opened_w_error(self._infos_path(),"r") as f:
                     return json.load(f)
             except IOError as e:
-                raise ObjectNotFound(data_object=self,message="Can't open the file",original_message=e)
+                raise ObjectNotFound(data_object=self,
+                        message="Can't open the file",original_message=e)
             except ValueError as e:
-                raise ObjectMalformed(data_object=self,message="Invalid Json Document",original_message=e)
+                raise ObjectMalformed(data_object=self,
+                        message="Invalid Json Document",original_message=e)
 
     def _new_id(self):
         """Set a new non used hash id to the object"""
@@ -150,12 +149,11 @@ class HFile(object):
         self._check_valid_dict()
         """Save the new data in the data file"""
         with self.__class__._Locks[self.id]:
-            with opened_w_error(self._infos_path(),"w") as f:
-                json.dump({k: value for k,value in self.infos.items() if k != "id"},f, indent=4)
             try:
                 with opened_w_error(self._infos_path(),"w") as f:
-                    #We don't store the id information since it's just a part of the file path.
-                    json.dump({k: value for k,value in self.infos.items() if k != "id"},f, indent=4)
+                    #The id information is already stored in the file path.
+                    d={k: value for k,value in self.infos.items() if k != "id"}
+                    json.dump(d,f, indent=4)
             except IOError as e:
                 raise ObjectNotFound(data_object=self,message="Can't save data.",original_message=e)
             except (ValueError,TypeError) as e:
@@ -170,7 +168,8 @@ class HFile(object):
             try:
                 os.remove(self._infos_path())
             except OSError as e:
-                raise ObjectNotFound(data_object=self,message="Can't remove the data",original_message=e)
+                raise ObjectNotFound(data_object=self,
+                        message="Can't remove the data",original_message=e)
         del self.__class__._Locks[self.id]
         del self._get.__func__.cache[(self,)]
 
@@ -179,7 +178,6 @@ class HFile(object):
     def _generate_id():
         """
         Generate a random ID.
-        We store the time in the beginning of the filename to be able to quickly get the last added data.
         """
         return uuid.uuid4().hex
    
@@ -199,7 +197,6 @@ class HFile(object):
         return uuid.UUID(hex=self.id).int
 
     def __eq__(self,object):
-        """Two objects are identicals if they represent the same data on the disk"""
         return isinstance(object,self.__class__) and self.id==object.id
 
 
@@ -246,7 +243,8 @@ class Node(HFile):
             
     def list_items(self,cls_item,begin=0,end=100):
         """Get all the items depending of the specified object"""
-        fnames,total=self._get_filenames("%s/*__%s.item"%(self._get_object_path(),cls_item.__name__),begin,end)
+        fnames,total=self._get_filenames("%s/*__%s.item"
+                %(self._get_object_path(),cls_item.__name__),begin,end)
         #We parse the id from the file name
         ids=map(lambda name:name.split("__")[0],fnames)
         return [cls_item(id=id,parent=self) for id in ids],total
@@ -254,9 +252,10 @@ class Node(HFile):
     def get_childs(self,begin=0,end=100):
         """Get all the child of the specified object"""
         if self.__class__.childType==None:
-            raise AttributeError("This is as parent class, cant't call a get_childs method")
-        fnames,total=self._get_filenames("%s/*.obj"%self._get_object_path(),begin,end)
-        return [self.__class__.childType(id=name,parent=self) for name in fnames],total
+            raise AttributeError(
+            "This is as parent class,cant't call a get_childs method")
+        fns,tot=self._get_filenames("%s/*.obj"%self._get_object_path(),begin,end)
+        return [self.__class__.childType(id=n,parent=self) for n in fns],tot
 
     def _new_id(self):
         super(Node,self)._new_id()
@@ -286,7 +285,10 @@ class Node(HFile):
         return "%s/infos.json"%self._get_object_path() 
     
     def _get_object_path(self):
-        dir=self.parent._get_object_path() if self.__class__.isChild else self.__class__._get_path()
+        if self.__class__.isChild:
+            dir=self.parent._get_object_path()
+        else:
+            dir=self.__class__._get_path()
         return "%s/%s.obj"%(dir,self.id)
 
     def remove(self):
@@ -294,5 +296,6 @@ class Node(HFile):
             try:
                 shutil.rmtree(self._get_object_path())
             except OSError as e:
-                raise ObjectNotFound(data_object=self,message="Can't remove the data",original_message=e)
+                raise ObjectNotFound(data_object=self,
+                        message="Can't remove the data",original_message=e)
         del self.__class__._Locks[self.id]
