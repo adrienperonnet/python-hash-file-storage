@@ -89,11 +89,12 @@ class HFile(object):
         """
         Write or read data in a file
         >obj=Obj(data={"test":"t"})
+        Write data in a file.
+        >obj=Obj(id=5,load=True) 
         recover the object from storage, with specified id
-        >obj=Obj(id=5,load=False) 
+        >obj=Obj(id=5,load=False)
         recover the object from storage, with specified id without reading
         the file: only to use specifics methods like remove().
-        >obj=Obj(id=5,load=False)
         """
         #Cache the function result
         if self.__class__.isChild and parent is None:
