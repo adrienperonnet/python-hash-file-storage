@@ -38,6 +38,6 @@ User.get_currents_obj()
 User(id=id1).remove()
 
 User.get_currents_obj()
->>>[id1],1
+>>>[id2],1
 
 ```
