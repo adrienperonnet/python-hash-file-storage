@@ -90,7 +90,7 @@ class HFile(object):
         Write or read data in a file
         >obj=Obj(data={"test":"t"})
         recover the object from storage, with specified id
-        >obj=Obj(id=5,load=True) 
+        >obj=Obj(id=5,load=False) 
         recover the object from storage, with specified id without reading
         the file: only to use specifics methods like remove().
         >obj=Obj(id=5,load=False)
@@ -123,7 +123,7 @@ class HFile(object):
     @memoize
     def _get(self):
         """
-        œRead data from the file.
+        Read data from the file.
         """
         with self.__class__._Locks[self.id]:
             try:
